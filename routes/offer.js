@@ -30,17 +30,14 @@ router.post(
           error: { message: " Price, Title or Description is unvalid" },
         });
       }
-      if (!req.files) {
-        // Process image
+      if (!req.files || req.files.pictures.length === 0) {
+        // Aboard creation if no image
         return res.status(400).json({
           error: {
             message: "Missing one important field: Need to send an image",
           },
         });
       }
-      const img = req.files.picture;
-      const imgBase64 = convertToBase64(img);
-
       const newOffer = new Offer({
         product_name: title,
         product_description: description,
@@ -55,11 +52,38 @@ router.post(
         owner: req.user,
       });
       await newOffer.save();
-      const resultUploadImage = await cloudinary.uploader.upload(imgBase64, {
-        folder: "/vinted/offers",
-        public_id: newOffer._id,
+
+      //if only one image, convert to array with one element
+      const picturesToUpload = [];
+      if (!Array.isArray(req.files.pictures)) {
+        picturesToUpload.push(req.files.pictures);
+      } else {
+        picturesToUpload.push.apply(picturesToUpload, req.files.pictures);
+      }
+
+      console.log(picturesToUpload);
+      const arrayOfPromises = picturesToUpload.map((picture) => {
+        if (picturesToUpload.indexOf(picture) === 0) {
+          return cloudinary.uploader.upload(convertToBase64(picture), {
+            folder: "/vinted/offers",
+            public_id: newOffer._id,
+          });
+        } else {
+          return cloudinary.uploader.upload(convertToBase64(picture), {
+            folder: "/vinted/offers",
+            public_id: newOffer._id + "_" + picturesToUpload.indexOf(picture),
+          });
+        }
       });
-      newOffer.product_image = resultUploadImage;
+      const resultsOfUploads = await Promise.all(arrayOfPromises);
+      // take the first image to define attribute product_image
+      newOffer.product_image = resultsOfUploads.shift();
+      newOffer.product_pictures = resultsOfUploads;
+      // const resultUploadImage = await cloudinary.uploader.upload(imgBase64, {
+      //   folder: "/vinted/offers",
+      //   public_id: newOffer._id,
+      // });
+      // newOffer.product_image = resultUploadImage;
       await newOffer.save();
       res.json({
         _id: newOffer._id,
