@@ -26,6 +26,6 @@ app.all("*", (req, res) => {
   res.status(400).json({ message: "Error 404 - Page Not Found" });
 });
 
-app.listen(3000, () => {
+app.listen(process.env.PORT, () => {
   console.log("Server 'Vinted' started");
 });

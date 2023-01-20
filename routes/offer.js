@@ -79,12 +79,8 @@ router.post(
       // take the first image to define attribute product_image
       newOffer.product_image = resultsOfUploads.shift();
       newOffer.product_pictures = resultsOfUploads;
-      // const resultUploadImage = await cloudinary.uploader.upload(imgBase64, {
-      //   folder: "/vinted/offers",
-      //   public_id: newOffer._id,
-      // });
-      // newOffer.product_image = resultUploadImage;
       await newOffer.save();
+
       res.json({
         _id: newOffer._id,
         product_name: newOffer.product_name,
